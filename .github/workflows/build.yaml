@@ -1,4 +1,4 @@
-name: CI - Runt Lint Check and Unit Tests
+name: CI - Run Lint Check and Unit Tests
 on:
   push:
     branches:
