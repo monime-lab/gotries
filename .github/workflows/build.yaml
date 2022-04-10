@@ -18,7 +18,7 @@ jobs:
       - name: Run Lint Check
         uses: golangci/golangci-lint-action@v2
         with:
-          version: v1.43.0
+          version: v3.1.0
 
       - name: Run Unit Tests
         run: go test
