@@ -24,15 +24,17 @@ var (
 
 type (
 	State interface {
+		Retrying() bool
 		LastError() error
-		CurrentRetry() int
-		StopRetry(stop bool)
+		CurrentAttempts() int
+		Context() context.Context
+		StopNextAttempt(stop bool)
 	}
 	Callback  func(interface{}, error)
 	Callback2 func(interface{}, interface{}, error)
-	Runnable  func(context.Context, State) error
-	Callable  func(context.Context, State) (interface{}, error)
-	Callable2 func(context.Context, State) (interface{}, interface{}, error)
+	Runnable  func(State) error
+	Callable  func(State) (interface{}, error)
+	Callable2 func(State) (interface{}, interface{}, error)
 	Retry     interface {
 		Run(ctx context.Context, runnable Runnable) error
 		Call(ctx context.Context, callable Callable) (interface{}, error)
@@ -46,14 +48,17 @@ type (
 	}
 )
 
+// Run is a syntactic sugar
 func Run(ctx context.Context, runnable Runnable, options ...Option) error {
 	return NewRetry(options...).Run(ctx, runnable)
 }
 
+// Call is a syntactic sugar
 func Call(ctx context.Context, callable Callable, options ...Option) (interface{}, error) {
 	return NewRetry(options...).Call(ctx, callable)
 }
 
+// Call2 is a syntactic sugar
 func Call2(ctx context.Context, callable2 Callable2, options ...Option) (interface{}, interface{}, error) {
 	return NewRetry(options...).Call2(ctx, callable2)
 }
@@ -65,22 +70,25 @@ func WithTaskName(name string) Option {
 	})
 }
 
-// WithMaxAttempts set the max retry attempts before giving up; -1 means retry "forever"
+// WithMaxAttempts set the max retry attempts before giving up; < 0 means keep retrying "forever"
+// Note, attempt semantics begins after the first execution.
 func WithMaxAttempts(attempts int) Option {
 	return optionFunc(func(c *Config) {
 		c.MaxAttempts = attempts
 	})
 }
 
-// WithBackoff the backoff algorithm to use
+// WithBackoff set the retry backoff algorithm to use. Default is ExponentialBackoff
 func WithBackoff(backoff Backoff) Option {
 	return optionFunc(func(c *Config) {
 		c.Backoff = backoff
 	})
 }
 
-// WithDefaultRecoverableErrorPredicate the backoff algorithm to use
-func WithDefaultRecoverableErrorPredicate(predicate func(err error) bool) Option {
+// WithRecoverableErrorPredicate set the predicate use to test whether an error is recoverable
+// or not before a retry is scheduled.
+// The default ensures the error is neither context.Canceled nor context.DeadlineExceeded
+func WithRecoverableErrorPredicate(predicate func(err error) bool) Option {
 	return optionFunc(func(c *Config) {
 		c.RecoverableErrorPredicate = predicate
 	})
@@ -105,7 +113,7 @@ func NewRetry(options ...Option) Retry {
 		config.TaskName = "default"
 	}
 	if config.Backoff == nil {
-		config.Backoff = Exponential
+		config.Backoff = ExponentialBackoff
 	}
 	if config.RecoverableErrorPredicate == nil {
 		config.RecoverableErrorPredicate = DefaultRecoverableErrorPredicate
@@ -114,28 +122,38 @@ func NewRetry(options ...Option) Retry {
 }
 
 type retry struct {
-	stop      bool
-	attempts  int
-	lastError error
-	config    *Config
+	stopNextAttempt bool
+	attempts        int
+	lastError       error
+	config          *Config
+	context         context.Context
+}
+
+func (r *retry) Retrying() bool {
+	return r.attempts > 0
 }
 
 func (r *retry) LastError() error {
 	return r.lastError
 }
 
-func (r *retry) StopRetry(stop bool) {
-	r.stop = stop
-}
-
-func (r *retry) CurrentRetry() int {
+func (r *retry) CurrentAttempts() int {
 	return r.attempts
 }
 
+func (r *retry) Context() context.Context {
+	return r.context
+}
+
+func (r *retry) StopNextAttempt(stop bool) {
+	r.stopNextAttempt = stop
+}
+
 func (r *retry) Run(ctx context.Context, runnable Runnable) (err error) {
-	if err = runnable(ctx, r); err != nil {
+	r.context = ctx
+	if err = runnable(r); err != nil {
 		for r.scheduleRetry(err) {
-			if err = runnable(ctx, r); err == nil {
+			if err = runnable(r); err == nil {
 				break
 			}
 		}
@@ -144,9 +162,10 @@ func (r *retry) Run(ctx context.Context, runnable Runnable) (err error) {
 }
 
 func (r *retry) Call(ctx context.Context, callable Callable) (res interface{}, err error) {
-	if res, err = callable(ctx, r); err != nil {
+	r.context = ctx
+	if res, err = callable(r); err != nil {
 		for r.scheduleRetry(err) {
-			if res, err = callable(ctx, r); err == nil {
+			if res, err = callable(r); err == nil {
 				break
 			}
 		}
@@ -155,9 +174,10 @@ func (r *retry) Call(ctx context.Context, callable Callable) (res interface{}, e
 }
 
 func (r *retry) Call2(ctx context.Context, callable2 Callable2) (res1 interface{}, res2 interface{}, err error) {
-	if res1, res2, err = callable2(ctx, r); err != nil {
+	r.context = ctx
+	if res1, res2, err = callable2(r); err != nil {
 		for r.scheduleRetry(err) {
-			if res1, res2, err = callable2(ctx, r); err == nil {
+			if res1, res2, err = callable2(r); err == nil {
 				break
 			}
 		}
@@ -169,15 +189,33 @@ func (r *retry) scheduleRetry(err error) bool {
 	r.attempts++
 	r.lastError = err
 	if err != nil && !r.config.RecoverableErrorPredicate(err) {
-		r.StopRetry(true)
+		r.StopNextAttempt(true)
 	}
-	if !r.stop && (r.config.MaxAttempts == -1 || r.attempts <= r.config.MaxAttempts) {
-		delay := r.config.Backoff.Next(r.attempts)
+	if !r.stopNextAttempt && (r.config.MaxAttempts < 0 || r.attempts <= r.config.MaxAttempts) {
+		delay := r.config.Backoff.NextDelay(r.attempts)
 		log.Printf("retry for failed task[%s], error[%s], attempts[%d], nextDelayMillis[%d]",
 			r.config.TaskName, err, r.attempts, delay.Milliseconds())
-		time.Sleep(delay)
-		return true
+		if r.sleep(delay) {
+			return true
+		}
+		// context was canceled
 	}
 	r.attempts-- // undo
 	return false
+}
+
+func (r *retry) sleep(delay time.Duration) bool {
+	timer := time.NewTimer(delay)
+	for {
+		select {
+		case <-r.context.Done():
+			if !timer.Stop() {
+				<-timer.C
+			}
+			// context was canceled
+			return false
+		case <-timer.C:
+			return true
+		}
+	}
 }

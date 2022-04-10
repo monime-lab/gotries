@@ -13,8 +13,8 @@ import (
 
 //goland:noinspection GoUnusedGlobalVariable
 var (
-	_         Backoff = &fibonacciBackoff{}
-	Fibonacci         = NewFibonacci(FibonacciConfig{
+	_                Backoff = &fibonacciBackoff{}
+	FibonacciBackoff         = NewFibonacci(FibonacciConfig{
 		Delay:    baseDelay,
 		MaxDelay: 30 * time.Second,
 		Jitter:   0.2,
@@ -30,7 +30,7 @@ type FibonacciConfig struct {
 	MaxDelay time.Duration
 }
 
-// NewFibonacci returns a Backoff that returns Fibonacci sequenced wait delays between failures
+// NewFibonacci returns a Backoff that returns FibonacciBackoff sequenced wait delays between failures
 func NewFibonacci(config FibonacciConfig) Backoff {
 	if config.Delay == 0 {
 		config.Delay = 500 * time.Millisecond
@@ -61,7 +61,7 @@ func (b *fibonacciBackoff) nextDelay(n int) uint32 {
 	return n1 + n2
 }
 
-func (b *fibonacciBackoff) Next(failures int) time.Duration {
+func (b *fibonacciBackoff) NextDelay(failures int) time.Duration {
 	if failures == 0 {
 		return b.config.Delay
 	}

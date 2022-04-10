@@ -13,8 +13,8 @@ import (
 
 //goland:noinspection GoUnusedGlobalVariable
 var (
-	_        Backoff = &constantBackoff{}
-	Constant         = NewConstant1(baseDelay)
+	_               Backoff = &constantBackoff{}
+	ConstantBackoff         = NewConstantBackoff(baseDelay)
 )
 
 type ConstantConfig struct {
@@ -24,13 +24,13 @@ type ConstantConfig struct {
 	Jitter float64
 }
 
-// NewConstant1 returns a Backoff that returns a constant wait delay between failures
-func NewConstant1(delay time.Duration) Backoff {
-	return NewConstant2(delay, 0.2)
+// NewConstantBackoff returns a Backoff that returns a constant wait delay between failures
+func NewConstantBackoff(delay time.Duration) Backoff {
+	return NewConstantBackoff2(delay, 0.2)
 }
 
-// NewConstant2 returns a Backoff that returns a constant wait delay between failures
-func NewConstant2(delay time.Duration, jitter float64) Backoff {
+// NewConstantBackoff2 returns a Backoff that returns a constant wait delay between failures
+func NewConstantBackoff2(delay time.Duration, jitter float64) Backoff {
 	return NewConstant(ConstantConfig{Delay: delay, Jitter: jitter})
 }
 
@@ -51,7 +51,7 @@ type constantBackoff struct {
 	config ConstantConfig
 }
 
-func (b *constantBackoff) Next(failures int) time.Duration {
+func (b *constantBackoff) NextDelay(failures int) time.Duration {
 	if failures == 0 {
 		return b.config.Delay
 	}

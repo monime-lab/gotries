@@ -13,8 +13,8 @@ import (
 
 //goland:noinspection GoUnusedGlobalVariable
 var (
-	_           Backoff = &exponentialBackoff{}
-	Exponential         = NewExponential(ExponentialConfig{
+	_                  Backoff = &exponentialBackoff{}
+	ExponentialBackoff         = NewExponential(ExponentialBackoffConfig{
 		Multiplier: 2.0,
 		Jitter:     0.2,
 		BaseDelay:  baseDelay,
@@ -22,7 +22,7 @@ var (
 	})
 )
 
-type ExponentialConfig struct {
+type ExponentialBackoffConfig struct {
 	// BaseDelay is the amount of time to backoff after the first failure.
 	BaseDelay time.Duration
 	// Multiplier is the factor with which to multiply backoffs after a
@@ -35,17 +35,17 @@ type ExponentialConfig struct {
 }
 
 // NewExponential returns a Backoff that returns exponential wait delays between failures
-func NewExponential(config ExponentialConfig) Backoff {
+func NewExponential(config ExponentialBackoffConfig) Backoff {
 	return &exponentialBackoff{
 		config: config,
 	}
 }
 
 type exponentialBackoff struct {
-	config ExponentialConfig
+	config ExponentialBackoffConfig
 }
 
-func (b *exponentialBackoff) Next(failures int) time.Duration {
+func (b *exponentialBackoff) NextDelay(failures int) time.Duration {
 	if failures == 0 {
 		return b.config.BaseDelay
 	}

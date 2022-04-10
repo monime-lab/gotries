@@ -23,8 +23,8 @@ type (
 	// Backoff defines the backoff abstraction,
 	// NB: Implementations must be safe for concurrent use
 	Backoff interface {
-		// Next returns the amount of time to wait before the next
+		// NextDelay returns the amount of time to wait before the next
 		// retry given the specified number of consecutive failures.
-		Next(failures int) time.Duration
+		NextDelay(failures int) time.Duration
 	}
 )

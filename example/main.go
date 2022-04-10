@@ -1,8 +1,4 @@
-# gotries
-
-A simple golang retry library
-
-```go
+//nolint
 package main
 
 import (
@@ -78,5 +74,3 @@ func exampleThree() {
 func getName(ctx context.Context) (string, error) {
 	return "John Doe", nil
 }
-
-```
