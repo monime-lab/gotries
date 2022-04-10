@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"log"
+	"sync"
 	"time"
 )
 
@@ -20,10 +21,13 @@ var (
 	DefaultRecoverableErrorPredicate       = func(err error) bool {
 		return !(errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded))
 	}
+	globalLock     sync.RWMutex
+	defaultOptions []Option
 )
 
 type (
-	State interface {
+	LoggerFunc func(template string, args ...interface{})
+	State      interface {
 		Retrying() bool
 		LastError() error
 		CurrentAttempts() int
@@ -41,12 +45,19 @@ type (
 		Call2(ctx context.Context, callable2 Callable2) (interface{}, interface{}, error)
 	}
 	Config struct {
-		MaxAttempts               int
-		TaskName                  string
-		Backoff                   Backoff
-		RecoverableErrorPredicate func(err error) bool
+		maxAttempts               int
+		taskName                  string
+		backoff                   Backoff
+		loggerFunc                LoggerFunc
+		recoverableErrorPredicate func(err error) bool
 	}
 )
+
+func SetDefaultOptions(options ...Option) {
+	globalLock.Lock()
+	defer globalLock.Unlock()
+	defaultOptions = options
+}
 
 // Run is a syntactic sugar
 func Run(ctx context.Context, runnable Runnable, options ...Option) error {
@@ -66,22 +77,29 @@ func Call2(ctx context.Context, callable2 Callable2, options ...Option) (interfa
 // WithTaskName name of the task useful for debugging...
 func WithTaskName(name string) Option {
 	return optionFunc(func(c *Config) {
-		c.TaskName = name
+		c.taskName = name
 	})
 }
 
 // WithMaxAttempts set the max retry attempts before giving up; < 0 means keep retrying "forever"
-// Note, attempt semantics begins after the first execution.
+// Note, attempt semantics begins after the first execution. Default is 3
 func WithMaxAttempts(attempts int) Option {
 	return optionFunc(func(c *Config) {
-		c.MaxAttempts = attempts
+		c.maxAttempts = attempts
 	})
 }
 
 // WithBackoff set the retry backoff algorithm to use. Default is ExponentialBackoff
 func WithBackoff(backoff Backoff) Option {
 	return optionFunc(func(c *Config) {
-		c.Backoff = backoff
+		c.backoff = backoff
+	})
+}
+
+// WithLogger set the retry backoff algorithm to use. Default is ExponentialBackoff
+func WithLogger(logger LoggerFunc) Option {
+	return optionFunc(func(c *Config) {
+		c.loggerFunc = logger
 	})
 }
 
@@ -90,7 +108,7 @@ func WithBackoff(backoff Backoff) Option {
 // The default ensures the error is neither context.Canceled nor context.DeadlineExceeded
 func WithRecoverableErrorPredicate(predicate func(err error) bool) Option {
 	return optionFunc(func(c *Config) {
-		c.RecoverableErrorPredicate = predicate
+		c.recoverableErrorPredicate = predicate
 	})
 }
 
@@ -105,18 +123,28 @@ func (f optionFunc) apply(c *Config) {
 }
 
 func NewRetry(options ...Option) Retry {
-	config := &Config{MaxAttempts: 4}
+	config := &Config{maxAttempts: 3}
+	func() {
+		globalLock.RLock()
+		defer globalLock.RUnlock()
+		for _, option := range defaultOptions {
+			option.apply(config)
+		}
+	}()
 	for _, option := range options {
 		option.apply(config)
 	}
-	if config.TaskName == "" {
-		config.TaskName = "default"
+	if config.taskName == "" {
+		config.taskName = "default"
 	}
-	if config.Backoff == nil {
-		config.Backoff = ExponentialBackoff
+	if config.backoff == nil {
+		config.backoff = ExponentialBackoff
 	}
-	if config.RecoverableErrorPredicate == nil {
-		config.RecoverableErrorPredicate = DefaultRecoverableErrorPredicate
+	if config.loggerFunc == nil {
+		config.loggerFunc = log.Printf
+	}
+	if config.recoverableErrorPredicate == nil {
+		config.recoverableErrorPredicate = DefaultRecoverableErrorPredicate
 	}
 	return &retry{config: config}
 }
@@ -188,13 +216,13 @@ func (r *retry) Call2(ctx context.Context, callable2 Callable2) (res1 interface{
 func (r *retry) scheduleRetry(err error) bool {
 	r.attempts++
 	r.lastError = err
-	if err != nil && !r.config.RecoverableErrorPredicate(err) {
+	if err != nil && !r.config.recoverableErrorPredicate(err) {
 		r.StopNextAttempt(true)
 	}
-	if !r.stopNextAttempt && (r.config.MaxAttempts < 0 || r.attempts <= r.config.MaxAttempts) {
-		delay := r.config.Backoff.NextDelay(r.attempts)
-		log.Printf("retry for failed task[%s], error[%s], attempts[%d], nextDelayMillis[%d]",
-			r.config.TaskName, err, r.attempts, delay.Milliseconds())
+	if !r.stopNextAttempt && (r.config.maxAttempts < 0 || r.attempts <= r.config.maxAttempts) {
+		delay := r.config.backoff.NextDelay(r.attempts)
+		r.config.loggerFunc("retry for failed task[%s], error[%s], attempts[%d], nextDelayMillis[%d]",
+			r.config.taskName, err, r.attempts, delay.Milliseconds())
 		if r.sleep(delay) {
 			return true
 		}

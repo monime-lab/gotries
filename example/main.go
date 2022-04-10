@@ -12,6 +12,7 @@ func main() {
 	exampleOne()
 	exampleTwo()
 	exampleThree()
+	//customDefaultOptions()
 }
 
 func exampleOne() {
@@ -28,6 +29,7 @@ func exampleOne() {
 }
 
 func exampleTwo() {
+	// the library is cancel or timeout aware on the Context during scheduling or on an error
 	resp, err := gotries.Call(context.TODO(), func(state gotries.State) (interface{}, error) {
 		if state.CurrentAttempts() == 2 {
 			return "It's a success!!!", nil
@@ -74,3 +76,12 @@ func exampleThree() {
 func getName(ctx context.Context) (string, error) {
 	return "John Doe", nil
 }
+
+// func customDefaultOptions() {
+//	gotries.SetDefaultOptions(
+//		gotries.WithLogger(func(template string, args ...interface{}) {
+//			zap.S().Infof(template, args...)
+//		}),
+//		gotries.WithBackoff(gotries.ConstantBackoff),
+//	)
+//}

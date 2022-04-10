@@ -1,6 +1,9 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/piehlabs/gotries)](https://goreportcard.com/report/github.com/piehlabs/gotries)
+[![LICENSE](https://img.shields.io/badge/License-Apache%202-blue.svg)](https://github.com/piehlabs/gotries/blob/main/LICENSE)
+
 # gotries
 
-A simple golang retry library
+A simple, flexible and production inspired golang retry library
 
 ```go
 package main
@@ -16,6 +19,7 @@ func main() {
 	exampleOne()
 	exampleTwo()
 	exampleThree()
+	//customDefaultOptions()
 }
 
 func exampleOne() {
@@ -32,6 +36,7 @@ func exampleOne() {
 }
 
 func exampleTwo() {
+	// the library is cancel or timeout aware on the Context during scheduling or on an error
 	resp, err := gotries.Call(context.TODO(), func(state gotries.State) (interface{}, error) {
 		if state.CurrentAttempts() == 2 {
 			return "It's a success!!!", nil
@@ -79,4 +84,21 @@ func getName(ctx context.Context) (string, error) {
 	return "John Doe", nil
 }
 
+// func customDefaultOptions() {
+//	gotries.SetDefaultOptions(
+//		gotries.WithLogger(func(template string, args ...interface{}) {
+//			zap.S().Infof(template, args...)
+//		}),
+//		gotries.WithBackoff(gotries.ConstantBackoff),
+//	)
+//}
+
 ```
+
+## Contribute
+
+For issues, comments, recommendation or feedback please [do it here](https://github.com/skulup/pulserl/issues).
+
+Contributions are highly welcome.
+
+:thumbsup:
