@@ -97,7 +97,7 @@ func getName(ctx context.Context) (string, error) {
 
 ## Contribute
 
-For issues, comments, recommendation or feedback please [do it here](https://github.com/skulup/pulserl/issues).
+For issues, comments, recommendation or feedback please [do it here](https://github.com/piehlabs/gotries/issues).
 
 Contributions are highly welcome.
 
