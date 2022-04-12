@@ -5,6 +5,14 @@
 
 A simple, flexible and production inspired golang retry library
 
+### Install
+
+```bash
+go get -u github.com/piehlabs/gotries
+```
+
+### Sample 
+
 ```go
 package main
 
