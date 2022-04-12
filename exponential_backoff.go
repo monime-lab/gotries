@@ -1,7 +1,6 @@
 /*
- * Copyright (C) 2021, Monime Ltd, All Rights Reserved.
- * Unauthorized copy or sharing of this file through
- * any medium is strictly not allowed.
+ * Copyright 2022 Pieh Labs, licensed under the
+ * Apache License, Version 2.0 (the "License");
  */
 
 package gotries
@@ -14,10 +13,10 @@ import (
 //goland:noinspection GoUnusedGlobalVariable
 var (
 	_                  Backoff = &exponentialBackoff{}
-	ExponentialBackoff         = NewExponential(ExponentialBackoffConfig{
+	ExponentialBackoff         = NewExponentialBackoff(ExponentialBackoffConfig{
 		Multiplier: 2.0,
-		Jitter:     0.2,
-		BaseDelay:  baseDelay,
+		Jitter:     defaultJitterFactor,
+		BaseDelay:  defaultBaseDelay,
 		MaxDelay:   30 * time.Second,
 	})
 )
@@ -25,20 +24,30 @@ var (
 type ExponentialBackoffConfig struct {
 	// BaseDelay is the amount of time to backoff after the first failure.
 	BaseDelay time.Duration
-	// Multiplier is the factor with which to multiply backoffs after a
+	// Multiplier is the factor with which to multiply backoff after a
 	// failed retry. Should ideally be greater than 1.
 	Multiplier float64
-	// Jitter is the factor with which backoffs are randomized.
+	// Jitter is the factor with which the delays are randomized.
 	Jitter float64
 	// MaxDelay is the upper bound of backoff delay.
 	MaxDelay time.Duration
 }
 
-// NewExponential returns a Backoff that returns exponential wait delays between failures
-func NewExponential(config ExponentialBackoffConfig) Backoff {
-	return &exponentialBackoff{
-		config: config,
+// NewExponentialBackoff returns a Backoff that delays with an exponential pattern between failures
+func NewExponentialBackoff(config ExponentialBackoffConfig) Backoff {
+	if config.Multiplier <= 0 {
+		config.BaseDelay = 2.0
 	}
+	if config.BaseDelay <= 0 {
+		config.BaseDelay = defaultBaseDelay
+	}
+	if config.Jitter <= 0 {
+		config.Jitter = defaultJitterFactor
+	}
+	if config.MaxDelay <= 0 {
+		config.MaxDelay = 30 * time.Second
+	}
+	return &exponentialBackoff{config: config}
 }
 
 type exponentialBackoff struct {
@@ -57,7 +66,7 @@ func (b *exponentialBackoff) NextDelay(failures int) time.Duration {
 	if backoff > max {
 		backoff = max
 	}
-	// Randomize backoff delays so we don't have bombarding of the target at the same time
-	backoff *= 1 + b.config.Jitter*(rnd.Float64()*2-1)
+	// Randomize the backoff delay, so we don't have multiple delays waking up at the same instants
+	backoff = addRandomJitterToDelay(backoff, b.config.BaseDelay, b.config.Jitter)
 	return time.Duration(math.Max(backoff, 0))
 }

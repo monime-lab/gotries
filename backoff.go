@@ -1,7 +1,6 @@
 /*
- * Copyright (C) 2021, Monime Ltd, All Rights Reserved.
- * Unauthorized copy or sharing of this file through
- * any medium is strictly not allowed.
+ * Copyright 2022 Pieh Labs, licensed under the
+ * Apache License, Version 2.0 (the "License");
  */
 
 package gotries
@@ -12,7 +11,8 @@ import (
 )
 
 const (
-	baseDelay = 200 * time.Millisecond
+	defaultJitterFactor = 0.2
+	defaultBaseDelay    = 500 * time.Millisecond
 )
 
 var (
@@ -28,3 +28,7 @@ type (
 		NextDelay(failures int) time.Duration
 	}
 )
+
+func addRandomJitterToDelay(delay float64, baseDelay time.Duration, jitterFactor float64) float64 {
+	return delay + (float64(baseDelay) * jitterFactor * rnd.Float64())
+}

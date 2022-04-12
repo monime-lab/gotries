@@ -1,7 +1,6 @@
 /*
- * Copyright (C) 2021, Monime Ltd, All Rights Reserved.
- * Unauthorized copy or sharing of this file through
- * any medium is strictly not allowed.
+ * Copyright 2022 Pieh Labs, licensed under the
+ * Apache License, Version 2.0 (the "License");
  */
 
 package gotries
@@ -89,7 +88,7 @@ func WithMaxAttempts(attempts int) Option {
 	})
 }
 
-// WithBackoff set the retry backoff algorithm to use. Default is ExponentialBackoff
+// WithBackoff set the retry backoff algorithm to use. Default is LinearBackoff
 func WithBackoff(backoff Backoff) Option {
 	return optionFunc(func(c *Config) {
 		c.backoff = backoff
@@ -113,12 +112,12 @@ func WithRecoverableErrorPredicate(predicate func(err error) bool) Option {
 }
 
 type Option interface {
-	apply(c *Config)
+	Apply(c *Config)
 }
 
 type optionFunc func(c *Config)
 
-func (f optionFunc) apply(c *Config) {
+func (f optionFunc) Apply(c *Config) {
 	f(c)
 }
 
@@ -128,17 +127,17 @@ func NewRetry(options ...Option) Retry {
 		globalLock.RLock()
 		defer globalLock.RUnlock()
 		for _, option := range defaultOptions {
-			option.apply(config)
+			option.Apply(config)
 		}
 	}()
 	for _, option := range options {
-		option.apply(config)
+		option.Apply(config)
 	}
 	if config.taskName == "" {
 		config.taskName = "default"
 	}
 	if config.backoff == nil {
-		config.backoff = ExponentialBackoff
+		config.backoff = LinearBackoff
 	}
 	if config.loggerFunc == nil {
 		config.loggerFunc = log.Printf

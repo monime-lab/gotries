@@ -1,7 +1,6 @@
 /*
- * Copyright (C) 2021, Monime Ltd, All Rights Reserved.
- * Unauthorized copy or sharing of this file through
- * any medium is strictly not allowed.
+ * Copyright 2022 Pieh Labs, licensed under the
+ * Apache License, Version 2.0 (the "License");
  */
 
 package gotries
@@ -14,29 +13,29 @@ import (
 //goland:noinspection GoUnusedGlobalVariable
 var (
 	_                Backoff = &fibonacciBackoff{}
-	FibonacciBackoff         = NewFibonacci(FibonacciConfig{
-		Delay:    baseDelay,
+	FibonacciBackoff         = NewFibonacciBackoff2(FibonacciConfig{
+		Delay:    defaultBaseDelay,
 		MaxDelay: 30 * time.Second,
-		Jitter:   0.2,
+		Jitter:   defaultJitterFactor,
 	})
 )
 
 type FibonacciConfig struct {
 	// Delay is the amount of time to backoff after every failure.
 	Delay time.Duration
-	// Jitter is the factor with which backoffs are randomized.
+	// Jitter is the factor with which the delays are randomized.
 	Jitter float64
 	// MaxDelay is the upper bound of backoff delay.
 	MaxDelay time.Duration
 }
 
-// NewFibonacci returns a Backoff that returns FibonacciBackoff sequenced wait delays between failures
-func NewFibonacci(config FibonacciConfig) Backoff {
-	if config.Delay == 0 {
-		config.Delay = 500 * time.Millisecond
+// NewFibonacciBackoff2 returns a Backoff that returns FibonacciBackoff sequenced wait delays between failures
+func NewFibonacciBackoff2(config FibonacciConfig) Backoff {
+	if config.Delay <= 0 {
+		config.Delay = defaultBaseDelay
 	}
-	if config.Jitter == 0 {
-		config.Jitter = 0.2
+	if config.Jitter <= 0 {
+		config.Jitter = defaultJitterFactor
 	}
 	return &fibonacciBackoff{config: config}
 }
@@ -70,7 +69,7 @@ func (b *fibonacciBackoff) NextDelay(failures int) time.Duration {
 	if backoff > max {
 		backoff = max
 	}
-	// Randomize backoff delays so we don't have bombarding of the target at the same time
-	backoff *= 1 + b.config.Jitter*(rnd.Float64()*2-1)
+	// Randomize the backoff delay, so we don't have multiple delays waking up at the same instants
+	backoff = addRandomJitterToDelay(backoff, b.config.Delay, b.config.Jitter)
 	return time.Duration(math.Max(backoff, 0))
 }

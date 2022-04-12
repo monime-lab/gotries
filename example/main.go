@@ -9,9 +9,9 @@ import (
 )
 
 func main() {
-	exampleOne()
+	//exampleOne()
 	exampleTwo()
-	exampleThree()
+	//exampleThree()
 	//customDefaultOptions()
 }
 
@@ -31,14 +31,14 @@ func exampleOne() {
 func exampleTwo() {
 	// the library is cancel or timeout aware on the Context during scheduling or on an error
 	resp, err := gotries.Call(context.TODO(), func(state gotries.State) (interface{}, error) {
-		if state.CurrentAttempts() == 2 {
-			return "It's a success!!!", nil
+		if state.CurrentAttempts() == 6 {
+			//return "It's a success!!!", nil
 		}
 		// if for_some_condition {
 		// 	 state.StopNextAttempt(true)
 		// }
 		return nil, errors.New("something wen wrong")
-	})
+	}, gotries.WithMaxAttempts(10))
 	if err != nil {
 		panic(err)
 	}
@@ -52,11 +52,12 @@ func exampleThree() {
 		},
 		gotries.WithMaxAttempts(5),
 		gotries.WithTaskName("getName"), // for debugging
+		//gotries.WithBackoff(gotries.LinearBackoff),
 		//gotries.WithBackoff(gotries.ConstantBackoff),
 		//gotries.WithBackoff(gotries.FibonacciBackoff),
 		gotries.WithBackoff(gotries.ExponentialBackoff),
 		//gotries.WithBackoff(gotries.NewConstantBackoff(1*time.Second)),
-		//gotries.WithBackoff(gotries.NewExponential(gotries.ExponentialBackoffConfig{
+		//gotries.WithBackoff(gotries.NewExponentialBackoff(gotries.ExponentialBackoffConfig{
 		//	Multiplier: 2.0,
 		//	Jitter:     0.2,
 		//	BaseDelay:  500 * time.Millisecond,

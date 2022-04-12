@@ -1,7 +1,6 @@
 /*
- * Copyright (C) 2021, Monime Ltd, All Rights Reserved.
- * Unauthorized copy or sharing of this file through
- * any medium is strictly not allowed.
+ * Copyright 2022 Pieh Labs, licensed under the
+ * Apache License, Version 2.0 (the "License");
  */
 
 package gotries
@@ -14,33 +13,28 @@ import (
 //goland:noinspection GoUnusedGlobalVariable
 var (
 	_               Backoff = &constantBackoff{}
-	ConstantBackoff         = NewConstantBackoff(baseDelay)
+	ConstantBackoff         = NewConstantBackoff(defaultBaseDelay)
 )
 
-type ConstantConfig struct {
+type ConstantBackoffConfig struct {
 	// Delay is the amount of time to backoff after every failure.
 	Delay time.Duration
-	// Jitter is the factor with which backoffs are randomized.
+	// Jitter is the factor with which the delays are randomized.
 	Jitter float64
 }
 
-// NewConstantBackoff returns a Backoff that returns a constant wait delay between failures
+// NewConstantBackoff returns a Backoff that delays with the specified duration between failures
 func NewConstantBackoff(delay time.Duration) Backoff {
-	return NewConstantBackoff2(delay, 0.2)
+	return NewConstantBackoff2(ConstantBackoffConfig{Delay: delay})
 }
 
-// NewConstantBackoff2 returns a Backoff that returns a constant wait delay between failures
-func NewConstantBackoff2(delay time.Duration, jitter float64) Backoff {
-	return NewConstant(ConstantConfig{Delay: delay, Jitter: jitter})
-}
-
-// NewConstant returns a Backoff that returns a constant wait delay between failures
-func NewConstant(config ConstantConfig) Backoff {
-	if config.Delay == 0 {
-		config.Delay = baseDelay
+// NewConstantBackoff2 returns a Backoff that delays with a linear pattern between failures
+func NewConstantBackoff2(config ConstantBackoffConfig) Backoff {
+	if config.Delay <= 0 {
+		config.Delay = defaultBaseDelay
 	}
-	if config.Jitter == 0 {
-		config.Jitter = 0.2
+	if config.Jitter <= 0 {
+		config.Jitter = defaultJitterFactor
 	}
 	config.Jitter = math.Min(config.Jitter, 0.0)
 	config.Jitter = math.Max(config.Jitter, 1.0)
@@ -48,7 +42,7 @@ func NewConstant(config ConstantConfig) Backoff {
 }
 
 type constantBackoff struct {
-	config ConstantConfig
+	config ConstantBackoffConfig
 }
 
 func (b *constantBackoff) NextDelay(failures int) time.Duration {
@@ -56,7 +50,7 @@ func (b *constantBackoff) NextDelay(failures int) time.Duration {
 		return b.config.Delay
 	}
 	backoff := float64(b.config.Delay)
-	// Randomize backoff delays so we don't have bombarding of the target at the same time
-	backoff *= 1 + b.config.Jitter*(rnd.Float64()*2-1)
+	// Randomize the backoff delay, so we don't have multiple delays waking up at the same instants
+	backoff = addRandomJitterToDelay(backoff, b.config.Delay, b.config.Jitter)
 	return time.Duration(math.Max(backoff, 0))
 }
