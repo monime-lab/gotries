@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 Monime Lab, licensed under the
+ * Copyright 2022 Monime Ltd, licensed under the
  * Apache License, Version 2.0 (the "License");
  */
 
