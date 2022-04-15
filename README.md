@@ -1,5 +1,5 @@
-[![Go Report Card](https://goreportcard.com/badge/github.com/piehlabs/gotries)](https://goreportcard.com/report/github.com/piehlabs/gotries)
-[![LICENSE](https://img.shields.io/badge/License-Apache%202-blue.svg)](https://github.com/piehlabs/gotries/blob/main/LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/monime-lab/gotries)](https://goreportcard.com/report/github.com/monime-lab/gotries)
+[![LICENSE](https://img.shields.io/badge/License-Apache%202-blue.svg)](https://github.com/monime-lab/gotries/blob/main/LICENSE)
 
 # gotries
 
@@ -8,7 +8,7 @@ A simple, flexible and production inspired golang retry library
 ### Install
 
 ```bash
-go get -u github.com/piehlabs/gotries
+go get -u github.com/monime-lab/gotries
 ```
 
 ### Sample 
@@ -19,7 +19,7 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/piehlabs/gotries"
+	"github.com/monime-lab/gotries"
 	"log"
 )
 
@@ -105,7 +105,7 @@ func getName(ctx context.Context) (string, error) {
 
 ## Contribute
 
-For issues, comments, recommendation or feedback please [do it here](https://github.com/piehlabs/gotries/issues).
+For issues, comments, recommendation or feedback please [do it here](https://github.com/monime-lab/gotries/issues).
 
 Contributions are highly welcome.
 

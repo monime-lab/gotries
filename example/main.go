@@ -4,7 +4,7 @@ package main
 import (
 	"context"
 	"errors"
-	"github.com/piehlabs/gotries"
+	"github.com/monime-lab/gotries"
 	"log"
 )
 

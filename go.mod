@@ -1,3 +1,3 @@
-module github.com/piehlabs/gotries
+module github.com/monime-lab/gotries
 
 go 1.16
