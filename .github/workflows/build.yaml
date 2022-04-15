@@ -1,0 +1,24 @@
+name: CI - Run Lint Check and Unit Tests
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2.3.2
+        name: Checkout
+
+      - name: Setup Go
+        uses: actions/setup-go@v2.1.3
+        with:
+          go-version: 1.17
+
+      - name: Run Lint Check
+        uses: golangci/golangci-lint-action@v2
+        with:
+          version: v1.45.2
+
+      - name: Run Unit Tests
+        run: go test
