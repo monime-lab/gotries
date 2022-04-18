@@ -47,7 +47,6 @@ type (
 		maxAttempts               int
 		taskName                  string
 		backoff                   Backoff
-		loggerFunc                LoggerFunc
 		recoverableErrorPredicate func(err error) bool
 	}
 )
@@ -95,13 +94,6 @@ func WithBackoff(backoff Backoff) Option {
 	})
 }
 
-// WithLogger set the retry backoff algorithm to use. Default is ExponentialBackoff
-func WithLogger(logger LoggerFunc) Option {
-	return optionFunc(func(c *Config) {
-		c.loggerFunc = logger
-	})
-}
-
 // WithRecoverableErrorPredicate set the predicate use to test whether an error is recoverable
 // or not before a retry is scheduled.
 // The default ensures the error is neither context.Canceled nor context.DeadlineExceeded
@@ -138,9 +130,6 @@ func NewRetry(options ...Option) Retry {
 	}
 	if config.backoff == nil {
 		config.backoff = LinearBackoff
-	}
-	if config.loggerFunc == nil {
-		config.loggerFunc = log.Printf
 	}
 	if config.recoverableErrorPredicate == nil {
 		config.recoverableErrorPredicate = DefaultRecoverableErrorPredicate
@@ -220,7 +209,7 @@ func (r *retry) scheduleRetry(err error) bool {
 	}
 	if !r.stopNextAttempt && (r.config.maxAttempts < 0 || r.attempts <= r.config.maxAttempts) {
 		delay := r.config.backoff.NextDelay(r.attempts)
-		r.config.loggerFunc("retry for failed task[%s], error[%s], attempts[%d], nextDelayMillis[%d]",
+		log.Printf("Retry: failed task[%s], error[%s], attempts[%d], nextDelayMillis[%d]",
 			r.config.taskName, err, r.attempts, delay.Milliseconds())
 		if r.sleep(delay) {
 			return true
