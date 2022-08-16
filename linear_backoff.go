@@ -51,7 +51,7 @@ type linearBackoff struct {
 }
 
 func (b *linearBackoff) NextDelay(failures int) time.Duration {
-	backoff := float64(failures+1) * float64(b.config.BaseDelay)
+	backoff := math.Min(float64(failures+1)*float64(b.config.BaseDelay), float64(b.config.MaxDelay))
 	// Randomize the backoff delay, so we don't have multiple delays waking up at the same instants
 	backoff = addRandomJitterToDelay(backoff, b.config.BaseDelay, b.config.Jitter)
 	return time.Duration(math.Max(backoff, 0))
