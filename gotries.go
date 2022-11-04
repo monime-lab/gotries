@@ -17,11 +17,11 @@ import (
 var (
 	_                                Retry = &retry{}
 	_                                State = &retry{}
-	DefaultRecoverableErrorPredicate       = func(err error) bool {
+	defaultOptions                   []Option
+	globalLock                       sync.RWMutex
+	DefaultRecoverableErrorPredicate = func(err error) bool {
 		return !(errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded))
 	}
-	globalLock     sync.RWMutex
-	defaultOptions []Option
 )
 
 type (

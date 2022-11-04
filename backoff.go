@@ -12,7 +12,7 @@ import (
 
 const (
 	defaultJitterFactor = 0.2
-	defaultBaseDelay    = 500 * time.Millisecond
+	defaultBaseDelay    = 50 * time.Millisecond
 )
 
 var (
