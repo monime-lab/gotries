@@ -13,6 +13,10 @@ import (
 	"time"
 )
 
+const (
+	DefaultRetryCount = 1
+)
+
 //goland:noinspection GoUnusedGlobalVariable
 var (
 	_                                Retry = &retry{}
@@ -114,7 +118,7 @@ func (f optionFunc) Apply(c *Config) {
 }
 
 func NewRetry(options ...Option) Retry {
-	config := &Config{maxAttempts: 3}
+	config := &Config{maxAttempts: DefaultRetryCount}
 	func() {
 		globalLock.RLock()
 		defer globalLock.RUnlock()
