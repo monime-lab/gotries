@@ -58,13 +58,13 @@ func (b *exponentialBackoff) NextDelay(failures int) time.Duration {
 	if failures == 0 {
 		return b.config.BaseDelay
 	}
-	backoff, max := float64(b.config.BaseDelay), float64(b.config.MaxDelay)
-	for backoff < max && failures > 0 {
+	backoff, mx := float64(b.config.BaseDelay), float64(b.config.MaxDelay)
+	for backoff < mx && failures > 0 {
 		backoff *= b.config.Multiplier
 		failures--
 	}
-	if backoff > max {
-		backoff = max
+	if backoff > mx {
+		backoff = mx
 	}
 	// Randomize the backoff delay, so we don't have multiple delays waking up at the same instants
 	backoff = addRandomJitterToDelay(backoff, b.config.BaseDelay, b.config.Jitter)

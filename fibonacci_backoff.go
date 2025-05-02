@@ -64,10 +64,10 @@ func (b *fibonacciBackoff) NextDelay(failures int) time.Duration {
 	if failures == 0 {
 		return b.config.Delay
 	}
-	max := float64(b.config.MaxDelay)
+	mx := float64(b.config.MaxDelay)
 	backoff := float64(b.config.Delay) * float64(b.nextDelay(failures))
-	if backoff > max {
-		backoff = max
+	if backoff > mx {
+		backoff = mx
 	}
 	// Randomize the backoff delay, so we don't have multiple delays waking up at the same instants
 	backoff = addRandomJitterToDelay(backoff, b.config.Delay, b.config.Jitter)

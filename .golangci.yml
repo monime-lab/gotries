@@ -1,7 +1,6 @@
-run:
-  timeout: 10m
+version: "2"
 linters:
-  disable-all: true
+  default: none
   enable:
     - asciicheck
     - bidichk
@@ -14,18 +13,14 @@ linters:
     - errname
     - errorlint
     - exhaustive
-    - exportloopref
     - gocognit
     - goconst
     - gocritic
     - gocyclo
-    - gofmt
     - gomodguard
-    - gosimple
     - importas
     - ineffassign
     - makezero
-    - megacheck
     - nakedret
     - nilerr
     - nilnil
@@ -35,23 +30,36 @@ linters:
     - prealloc
     - predeclared
     - staticcheck
-    - stylecheck
-    - tenv
-    - typecheck
     - unconvert
     - unused
     - whitespace
-  fast: false
-issues:
-  exclude:
-    - "SA1019"
-    - "ST1003"
-    - "regexpMust"
-output:
-  staticcheck:
-    checks: [ "all" ]
-  stylecheck:
-    checks: [ "all" ]
-  gosec:
-    severity: "high"
-    confidence: "high"
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - path: (.+)\.go$
+        text: SA1019
+      - path: (.+)\.go$
+        text: ST1003
+      - path: (.+)\.go$
+        text: regexpMust
+      - linters:
+          - staticcheck
+        text: "QF1008:"
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

@@ -24,7 +24,7 @@ var (
 	defaultOptions                   []Option
 	globalLock                       sync.RWMutex
 	DefaultRecoverableErrorPredicate = func(err error) bool {
-		return !(errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded))
+		return !errors.Is(err, context.Canceled)
 	}
 )
 
